@@ -40,8 +40,10 @@
 #include "videoinfo.hpp"
 #include "slideshoweditor.hpp"
 #include "schedule.hpp"
+#include "remoteserver.hpp"
 
 class QActionGroup;
+class QLabel;
 
 namespace Ui
 {
@@ -138,6 +140,13 @@ private:
     // Schelude list
     QList<Schedule> schedule;
     QDir appDataDir;
+
+    // Remote control from a tablet/phone (see remotecontrol.cpp)
+    RemoteServer *remoteServer;
+    QLabel *remoteLabel;
+    void startRemoteControl();
+    RemoteReply remoteHandle(const QString &path, const QUrlQuery &query);
+    QByteArray remoteState();
 
 private slots:
     void showDisplayScreen(bool show);

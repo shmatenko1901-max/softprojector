@@ -88,7 +88,9 @@ SOURCES += sources/main.cpp \
     sources/projectordisplayscreen.cpp \
     sources/imagegenerator.cpp \
     sources/spimageprovider.cpp \
-    sources/mediacontrol.cpp
+    sources/mediacontrol.cpp \
+    sources/remoteserver.cpp \
+    sources/remotecontrol.cpp
 HEADERS += headers/softprojector.hpp \
     headers/songwidget.hpp \
     headers/biblewidget.hpp \
@@ -131,7 +133,8 @@ HEADERS += headers/softprojector.hpp \
     headers/projectordisplayscreen.hpp \
     headers/imagegenerator.hpp \
     headers/spimageprovider.hpp \
-    headers/mediacontrol.hpp
+    headers/mediacontrol.hpp \
+    headers/remoteserver.hpp
 FORMS += ui/softprojector.ui \
     ui/songwidget.ui \
     ui/biblewidget.ui \

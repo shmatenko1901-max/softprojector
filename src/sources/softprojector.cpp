@@ -188,10 +188,15 @@ SoftProjector::SoftProjector(QWidget *parent)
 
     version_string = "2.2";
     this->setWindowTitle("SoftProjector " + version_string);
+
+    // Start remote control web server (tablet / phone)
+    startRemoteControl();
 }
 
 SoftProjector::~SoftProjector()
 {
+    delete remoteServer;
+    remoteServer = nullptr;
     saveSettings();
     delete songWidget;
     delete editWidget;

@@ -193,6 +193,64 @@ void BibleWidget::sendToProjector(bool add_to_history)
     }
 }
 
+bool BibleWidget::remoteShow(QString reference)
+{
+    // Open a Bible place typed on the tablet, e.g. "Ин 3 16" or "Иоанна 3:16",
+    // exactly as if it was typed into the book field, then send it live.
+    reference.replace(":", " ").replace(",", " ").replace(".", " ");
+    reference = reference.simplified();
+    if(reference.isEmpty())
+        return false;
+
+    // Split off chapter / verse numbers at the end
+    QStringList words = reference.split(" ");
+    QStringList nums;
+    while(words.count() > 1 && nums.count() < 2)
+    {
+        bool ok;
+        words.last().toInt(&ok);
+        if(!ok)
+            break;
+        nums.prepend(words.takeLast());
+    }
+    QString bookPart = words.join(" ");
+
+    // Find the best matching book: name starts with the text, then any word
+    // of the name starts with it. Otherwise leave it to the normal filter.
+    if(!bookPart.isEmpty() && !bookPart.at(0).isDigit())
+    {
+        QStringList books = bible.getBooks();
+        QString found;
+        for(const QString &b : books)
+            if(b.startsWith(bookPart, Qt::CaseInsensitive)) { found = b; break; }
+        if(found.isEmpty())
+        {
+            for(const QString &b : books)
+            {
+                const QStringList bw = b.split(" ");
+                for(const QString &w : bw)
+                    if(w.startsWith(bookPart, Qt::CaseInsensitive)) { found = b; break; }
+                if(!found.isEmpty())
+                    break;
+            }
+        }
+        if(!found.isEmpty())
+            reference = (QStringList() << found << nums).join(" ");
+    }
+
+    ui->lineEditBook->setText(reference);
+    on_lineEditBook_textChanged(reference); // make sure filter runs even if text was the same
+
+    if(ui->listBook->count() == 0 || !ui->listBook->currentItem() || !ui->listChapterNum->currentItem())
+        return false;
+
+    if(ui->chapter_preview_list->selectionModel()->selection().isEmpty())
+        ui->chapter_preview_list->setCurrentRow(0);
+
+    sendToProjector(true);
+    return true;
+}
+
 void BibleWidget::on_lineEditBook_textChanged(QString text)
 {
     // Called when the bible book filter field is modified.

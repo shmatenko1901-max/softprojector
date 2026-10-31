@@ -54,6 +54,7 @@ public slots:
     void setShownSplitterState(QByteArray& state);
     void loadBibles(QString initialId);
     void sendToProjector(bool add_to_history);
+    bool remoteShow(QString reference); // used by tablet remote control
     void setSettings(BibleVersionSettings& sets);
     BibleHistory getCurrentVerse();
     void addToHistory(BibleHistory &b);

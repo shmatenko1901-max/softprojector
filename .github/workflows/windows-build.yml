@@ -1,0 +1,60 @@
+name: Windows build
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: 'win64_msvc2022_64'
+          modules: 'qtmultimedia'
+          cache: true
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        shell: cmd
+        working-directory: src
+        run: |
+          qmake softProjector.pro CONFIG+=release
+          nmake
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $out = "SoftProjector"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Copy-Item src/win32_build/bin/SoftProjector.exe $out/
+          windeployqt --release --qmldir src/qml "$out/SoftProjector.exe"
+          New-Item -ItemType Directory -Force "$out/translations" | Out-Null
+          Copy-Item src/translations/*.qm "$out/translations/"
+          Copy-Item src/translations/*.png "$out/translations/"
+          Copy-Item -Recurse help "$out/help"
+          Compress-Archive -Path $out -DestinationPath SoftProjector-Windows.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoftProjector-Windows
+          path: SoftProjector-Windows.zip
+
+      - name: Publish as release "latest"
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>$null
+          gh release create latest SoftProjector-Windows.zip --title "SoftProjector с пультом для планшета" --notes "Сборка $(git rev-parse --short HEAD)" --latest

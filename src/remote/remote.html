@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>SoftProjector — пульт</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1d2026; --card: #262a31; --line: #343944;
+    --text: #eef0f3; --muted: #9aa1ad; --accent: #3b82f6; --live: #e5484d; --ok: #30a46c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 17px/1.35 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  body { display: flex; flex-direction: column; }
+
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  #status { flex: none; font-size: 13px; font-weight: 700; letter-spacing: .04em;
+    padding: 5px 10px; border-radius: 999px; background: var(--card); color: var(--muted); }
+  #status.live { background: var(--live); color: #fff; }
+  #status.off { background: #6b2c2c; color: #fff; }
+  #title { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  nav { display: flex; background: var(--panel); border-bottom: 1px solid var(--line); }
+  nav button { flex: 1; padding: 12px 6px; background: none; border: 0; color: var(--muted);
+    font: inherit; font-size: 15px; border-bottom: 3px solid transparent; }
+  nav button.on { color: var(--text); border-bottom-color: var(--accent); }
+
+  main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; }
+  .tab { display: none; }
+  .tab.on { display: block; }
+
+  .item { background: var(--card); border: 2px solid transparent; border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 10px; white-space: pre-wrap; cursor: pointer;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .item:active { background: var(--line); }
+  .item.cur { border-color: var(--accent); background: #24324a; }
+  .item .n { color: var(--muted); font-size: 13px; margin-right: 6px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .empty { color: var(--muted); text-align: center; padding: 40px 10px; }
+
+  .search { display: flex; gap: 8px; margin-bottom: 12px; position: sticky; top: 0; }
+  .search input { flex: 1; min-width: 0; font: inherit; font-size: 18px; padding: 12px 14px;
+    background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
+  .search button { font: inherit; padding: 0 18px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #fff; font-weight: 600; }
+  .hint { color: var(--muted); font-size: 14px; margin: -4px 2px 12px; }
+
+  footer { display: grid; grid-template-columns: 1fr 1.3fr 1fr 1fr; gap: 8px; padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom)); background: var(--panel);
+    border-top: 1px solid var(--line); }
+  footer button { font: inherit; font-weight: 700; font-size: 18px; padding: 18px 6px;
+    border: 0; border-radius: 12px; background: var(--card); color: var(--text); }
+  footer button:active { filter: brightness(1.3); }
+  #btnShow.live { background: var(--live); color: #fff; }
+  #btnShow.off { background: var(--ok); color: #fff; }
+  #btnClear { font-size: 15px; }
+
+  #toast { position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%);
+    background: #000c; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 15px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <span id="status">…</span>
+  <span id="title">Подключение…</span>
+</header>
+
+<nav>
+  <button data-tab="slides" class="on">Слайды</button>
+  <button data-tab="schedule">Расписание</button>
+  <button data-tab="songs">Песни</button>
+  <button data-tab="bible">Библия</button>
+</nav>
+
+<main>
+  <section class="tab on" id="tab-slides"><div id="slides"></div></section>
+  <section class="tab" id="tab-schedule"><div id="schedule"></div></section>
+  <section class="tab" id="tab-songs">
+    <form class="search" id="songForm">
+      <input id="songQ" type="search" placeholder="Номер или название песни" autocomplete="off">
+      <button>Найти</button>
+    </form>
+    <div id="songs"></div>
+  </section>
+  <section class="tab" id="tab-bible">
+    <form class="search" id="bibleForm">
+      <input id="bibleQ" type="search" placeholder="Например: Иоанна 3 16" autocomplete="off">
+      <button>Открыть</button>
+    </form>
+    <div class="hint">Книга, глава и стих через пробел. Можно начало названия: «Иоан 3 16», «1 Кор 13».</div>
+    <div id="bibleHistory"></div>
+  </section>
+</main>
+
+<footer>
+  <button id="btnPrev">◀</button>
+  <button id="btnShow">…</button>
+  <button id="btnClear">Без текста</button>
+  <button id="btnNext">▶</button>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  var state = null, slidesKey = '', schedKey = '', lastCur = -2;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove('on'); }, 1800);
+  }
+
+  function api(url) {
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, data: j }; });
+    });
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function render(s) {
+    state = s;
+    var st = $('status'), bs = $('btnShow');
+    st.textContent = s.showing ? 'НА ЭКРАНЕ' : 'СКРЫТО';
+    st.className = s.showing ? 'live' : 'off';
+    bs.textContent = s.showing ? 'Скрыть' : 'Показать';
+    bs.className = s.showing ? 'live' : 'off';
+    $('title').textContent = s.title || '—';
+
+    var key = s.title + '\u0001' + s.slides.join('\u0001');
+    if (key !== slidesKey) {
+      slidesKey = key; lastCur = -2;
+      $('slides').innerHTML = s.slides.length
+        ? s.slides.map(function (t, i) {
+            return '<div class="item" data-i="' + i + '">' + esc(t) + '</div>';
+          }).join('')
+        : '<div class="empty">Ничего не выбрано.<br>Выберите песню, место из Библии или пункт расписания.</div>';
+    }
+    if (s.current !== lastCur) {
+      var items = $('slides').children;
+      for (var i = 0; i < items.length; i++) items[i].classList.toggle('cur', i === s.current);
+      if (items[s.current] && items[s.current].scrollIntoView)
+        items[s.current].scrollIntoView({ block: 'nearest', behavior: lastCur === -2 ? 'auto' : 'smooth' });
+      lastCur = s.current;
+    }
+
+    var sk = s.schedule.join('\u0001') + '|' + s.scheduleCurrent;
+    if (sk !== schedKey) {
+      schedKey = sk;
+      $('schedule').innerHTML = s.schedule.length
+        ? s.schedule.map(function (t, i) {
+            return '<div class="item' + (i === s.scheduleCurrent ? ' cur' : '') + '" data-i="' + i + '">' +
+                   '<span class="n">' + (i + 1) + '.</span>' + esc(t) + '</div>';
+          }).join('')
+        : '<div class="empty">Расписание пустое.<br>Составьте его на компьютере перед служением.</div>';
+    }
+  }
+
+  function cmd(c, i) {
+    return api('/api/cmd?c=' + c + (i !== undefined ? '&i=' + i : ''))
+      .then(function (r) { render(r.data); })
+      .catch(function () { toast('Нет связи с компьютером'); });
+  }
+
+  function showTab(name) {
+    document.querySelectorAll('nav button').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-tab') === name);
+    });
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.classList.toggle('on', t.id === 'tab-' + name);
+    });
+    $('tab-slides').parentNode.scrollTop = 0;
+    if (name === 'slides') lastCur = -2, state && render(state);
+  }
+
+  document.querySelectorAll('nav button').forEach(function (b) {
+    b.onclick = function () { showTab(b.getAttribute('data-tab')); };
+  });
+
+  $('slides').onclick = function (e) {
+    var it = e.target.closest('.item'); if (it) cmd('slide', +it.getAttribute('data-i'));
+  };
+  $('schedule').onclick = function (e) {
+    var it = e.target.closest('.item');
+    if (it) cmd('schedule', +it.getAttribute('data-i')).then(function () { showTab('slides'); });
+  };
+
+  $('btnPrev').onclick = function () { cmd('prev'); };
+  $('btnNext').onclick = function () { cmd('next'); };
+  $('btnClear').onclick = function () { cmd('clear'); toast('Текст убран, фон остался'); };
+  $('btnShow').onclick = function () { cmd(state && state.showing ? 'hide' : 'show'); };
+
+  // Songs
+  $('songForm').onsubmit = function (e) {
+    e.preventDefault();
+    var q = $('songQ').value.trim(); if (!q) return;
+    $('songQ').blur();
+    api('/api/songs?q=' + encodeURIComponent(q)).then(function (r) {
+      var list = r.data;
+      $('songs').innerHTML = list.length
+        ? list.map(function (s) {
+            return '<div class="item" data-id="' + s.id + '"><span class="n">' + s.number + '</span>' +
+                   esc(s.title) + '<div class="sub">' + esc(s.songbook || '') + '</div></div>';
+          }).join('')
+        : '<div class="empty">Ничего не найдено</div>';
+    }).catch(function () { toast('Нет связи с компьютером'); });
+  };
+  $('songs').onclick = function (e) {
+    var it = e.target.closest('.item'); if (!it) return;
+    api('/api/song?id=' + it.getAttribute('data-id')).then(function (r) {
+      render(r.data); showTab('slides');
+    }).catch(function () { toast('Нет связи с компьютером'); });
+  };
+
+  // Bible
+  var history = [];
+  try { history = JSON.parse(localStorage.getItem('spBible') || '[]'); } catch (e) {}
+  function drawHistory() {
+    $('bibleHistory').innerHTML = history.map(function (h) {
+      return '<div class="item" data-ref="' + esc(h) + '">' + esc(h) + '</div>';
+    }).join('');
+  }
+  function openBible(ref) {
+    api('/api/bible?ref=' + encodeURIComponent(ref)).then(function (r) {
+      render(r.data);
+      if (!r.ok) { toast('Не нашёл «' + ref + '»'); return; }
+      history = [ref].concat(history.filter(function (h) { return h !== ref; })).slice(0, 15);
+      try { localStorage.setItem('spBible', JSON.stringify(history)); } catch (e) {}
+      drawHistory(); showTab('slides');
+    }).catch(function () { toast('Нет связи с компьютером'); });
+  }
+  $('bibleForm').onsubmit = function (e) {
+    e.preventDefault();
+    var q = $('bibleQ').value.trim(); if (!q) return;
+    $('bibleQ').blur(); openBible(q);
+  };
+  $('bibleHistory').onclick = function (e) {
+    var it = e.target.closest('.item'); if (it) openBible(it.getAttribute('data-ref'));
+  };
+  drawHistory();
+
+  // Keep in sync with the computer
+  var failed = 0;
+  function poll() {
+    api('/api/state').then(function (r) { failed = 0; render(r.data); })
+      .catch(function () {
+        if (++failed >= 2) {
+          $('status').textContent = 'НЕТ СВЯЗИ'; $('status').className = '';
+          $('title').textContent = 'Проверьте Wi-Fi и что SoftProjector открыт';
+        }
+      })
+      .then(function () { setTimeout(poll, 1000); });
+  }
+  poll();
+})();
+</script>
+</body>
+</html>
