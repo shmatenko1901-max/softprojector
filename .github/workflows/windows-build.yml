@@ -26,11 +26,18 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Build
-        shell: cmd
+        shell: pwsh
         working-directory: src
         run: |
-          qmake softProjector.pro CONFIG+=release
-          nmake
+          qmake softProjector.pro CONFIG+=release 2>&1 | Tee-Object -FilePath ../build.txt
+          nmake 2>&1 | Tee-Object -FilePath ../build.txt -Append
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            # Show compiler errors as annotations (visible without downloading logs)
+            $errs = Select-String -Path ../build.txt -Pattern ': (fatal )?error|error C|error LNK|Error:' | Select-Object -First 9
+            foreach ($e in $errs) { Write-Output ("::error::" + ($e.Line -replace '^.*\\src\\','')) }
+            exit $code
+          }
 
       - name: Package
         shell: pwsh
